@@ -1,0 +1,9 @@
+{
+  "threshold": 0.8494319915771484,
+  "train_stats": {
+    "method": "fallback_max",
+    "t": 0.840167224407196,
+    "Nt": 8
+  },
+  "train_end_idx": 500
+}
