@@ -1,0 +1,26 @@
+paths:
+  raw_data: "data/raw/"
+  processed_data: "data/processed/"
+  model_save: "artifacts/models/" # katalog — train_all.py dodaje {stem}.pth
+  scaler_save: "artifacts/scalers/" # katalog — train_all.py dodaje {stem}.pkl
+  threshold_save: "artifacts/thresholds/" # katalog — train_all.py dodaje {stem}.json
+  results_dir: "artifacts/results/"
+
+data:
+  window_size: 100 # Długość okna czasowego W (w krokach)
+  stride: 1 # Krok przesunięcia okna (1 = maksymalna gęstość)
+  n_features: 38 # Liczba cech telemetrycznych (stała dla zbioru SMD)
+
+model:
+  hidden_dims: [64, 32]
+  latent_dim: 16
+  learning_rate: 0.001
+  batch_size: 64
+  epochs: 100
+  early_stopping_patience: 20
+  weight_decay: 0.0
+
+thresholding:
+  sigma_multiplier: 3.0
+  aggregation: "maximum"
+  threshold_percentile: 99.0
