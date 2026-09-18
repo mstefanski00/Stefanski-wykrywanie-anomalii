@@ -35,7 +35,6 @@ def list_machines(config: dict) -> list[str]:
     stems = []
     for model_file in sorted(models_dir.glob("*.pth")):
         stem = model_file.stem
-        # Sprawdzamy tylko model i skaler. JSON-a poszukamy dynamicznie.
         if (scalers_dir / f"{stem}.pkl").exists():
             stems.append(stem)
     return stems
@@ -49,12 +48,10 @@ def load_pretrained(stem: str, config: dict):
     model_path = models_dir / f"{stem}.pth"
     scaler_path = scalers_dir / f"{stem}.pkl"
     
-    # 1. Szukamy progu POT z ostatecznego eksperymentu SOTA
     pot_path = thresholds_dir / f"{stem}_recalib_v12_v9_PA_MAX.json"
     if pot_path.exists():
         thr_path = pot_path
     else:
-        # Fallback do starego pliku, jeśli SOTA nie zostało wygenerowane dla danej maszyny
         thr_path = thresholds_dir / f"{stem}.json"
 
     if not thr_path.exists():
@@ -116,11 +113,9 @@ def run_inference(
 
     df_test = pl.read_csv(io.BytesIO(file_bytes_test), null_values=["", "NA", "NaN"])
     
-    # Jeśli w pliku testowym brakuje kolumny 'label', wypełnij ją zerami
     if "label" not in df_test.columns:
         df_test = df_test.with_columns(pl.lit(0).alias("label"))
 
-    # Zamiana do macierzy numpy, odseparowanie etykiet i rzutowanie typów
     raw_test = df_test.drop("label").cast(pl.Float32, strict=False).fill_null(0.0).to_numpy()
     labels_raw = df_test.get_column("label").cast(pl.Float32, strict=False).fill_null(0.0).to_numpy()
 
@@ -128,7 +123,6 @@ def run_inference(
     stride = config["data"]["stride"]
     batch_size = config["model"]["batch_size"]
 
-    # Transformacja danych za pomocą załadowanego RobustScalera
     test_scaled = _scaler.transform(raw_test)
 
     X_test = create_sliding_windows(test_scaled, window_size, stride)
@@ -152,19 +146,17 @@ def run_inference(
             batch_x = batch_x.to(_device)
             recon = _model(batch_x)
             
-            # Macierz błędu: Kształt -> [Batch, Window_Size, Features]
             loss_matrix = criterion_none(recon, batch_x)  
 
-            # Uśrednianie po długości okna -> [Batch, Features]
             feat_err = loss_matrix.mean(dim=1)  
             
 
             k_val = min(top_k, feat_err.size(-1))
             e = torch.topk(feat_err, k=k_val, dim=1).values.mean(dim=1).cpu().numpy()
 
-            agg_errors.append(e)                                   # Błąd ostateczny (Top-K)
-            per_feature_errors.append(feat_err.cpu().numpy())      # Błędy per czujnik (do Heatmapy)
-            reconstructions.append(recon[:, -1, :].cpu().numpy())  # Rekonstrukcja (do widoku szczegółowego)
+            agg_errors.append(e)                                   
+            per_feature_errors.append(feat_err.cpu().numpy())      
+            reconstructions.append(recon[:, -1, :].cpu().numpy())  
 
     raw_errors = np.concatenate(agg_errors)
     
