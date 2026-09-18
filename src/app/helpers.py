@@ -113,9 +113,7 @@ def run_inference(
     train_stats: dict,
     top_k: int = 5,
 ):
-    # =========================================================
-    # OPTYMALIZACJA: Czysty Polars zamiast Pandas
-    # =========================================================
+
     df_test = pl.read_csv(io.BytesIO(file_bytes_test), null_values=["", "NA", "NaN"])
     
     # Jeśli w pliku testowym brakuje kolumny 'label', wypełnij ją zerami
@@ -144,9 +142,7 @@ def run_inference(
         shuffle=False,
     )
 
-    # =========================================================
-    # SOTA V9: Przejście z MSE na L1Loss (MAE)
-    # =========================================================
+
     criterion_none = nn.L1Loss(reduction="none")
     agg_errors, per_feature_errors, reconstructions = [], [], []
 
@@ -162,9 +158,7 @@ def run_inference(
             # Uśrednianie po długości okna -> [Batch, Features]
             feat_err = loss_matrix.mean(dim=1)  
             
-            # =========================================================
-            # SOTA V9: Agregacja Top-K (Filtracja Szumu)
-            # =========================================================
+
             k_val = min(top_k, feat_err.size(-1))
             e = torch.topk(feat_err, k=k_val, dim=1).values.mean(dim=1).cpu().numpy()
 
@@ -174,9 +168,7 @@ def run_inference(
 
     raw_errors = np.concatenate(agg_errors)
     
-    # =========================================================
-    # SOTA V9: Wygładzanie za pomocą Polars
-    # =========================================================
+
 
     reconstructions_concat = np.concatenate(reconstructions)
     reconstructed_unscaled = _scaler.inverse_transform(reconstructions_concat)
